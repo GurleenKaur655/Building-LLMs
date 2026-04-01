@@ -21,5 +21,12 @@ y = enc_sample[1:context_size+1]
 print(f"x: {x}")
 print(f"y:      {y}")
 
+# processing the inputs along with the targets,which are the inputs shifted by one position, we can then create the next-word prediction tasks as follows: 
+for i in range(1, context_size+1):
+    context = enc_sample[:i]
+    desired = enc_sample[i]
+
+    print(context, "---->", desired)
+
 
 
