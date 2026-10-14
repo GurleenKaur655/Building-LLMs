@@ -1,10 +1,11 @@
 from importlib import metadata
 import tiktoken 
 
-print("tiktoken version:", metadata.version("tiktoken"))
+print("tiktoken version:", metadata.version("tiktoken")) #0.6.0
 
 tokenizer = tiktoken.get_encoding("gpt2") 
 # this is a byte-pair encoding (BPE) tokenizer used by GPT-2 and GPT-3 models
+#similar to the SimpleTokenizerV2 but it is more advanced because it uses BPE which breaks down words into subwords or smaller units and it has a vocabulary of 50257 tokens which is much larger than our simple tokenizer which has a vocabulary of 1132 tokens
 
 text = ("Hello, do you like tea? <|endoftext|> In the sunlight terraces of someunknownPlace.")
 
@@ -27,3 +28,4 @@ print(integers)
 strings = tokenizer.decode(integers)
 print(strings)
 
+#BPE basically breaks down the words to the subwords and even individual charactrs thats why it never uses the unknown token 

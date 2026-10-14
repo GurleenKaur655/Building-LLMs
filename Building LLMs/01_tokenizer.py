@@ -2,16 +2,17 @@ with open("the-verdict.txt", "r", encoding="utf-8") as inputFile:
     # r means we are reading this file 
     raw_text = inputFile.read()
 
-print("Total number of characters:", len(raw_text)) # Prints the total number of characters in the text
+print("Total number of characters:", len(raw_text)) # Prints the total number of characters in the text //20479
 print(raw_text[:99]) # Prints the first 99 characters of the text
 
 # Goal is to tokenize the text into words
 
-# will use re python library to help with tokenization, re = regular expressions
+# will use re python library to help with tokenization, re = regular expressions, used for searching, matching and splitting and replacing text using patterns and patterns are defined using special syntax like \s for whitespace, \d for digits, \w for word characters, etc.
 import re
 
 preprocessed = re.split(r'([,.:;?_!"()\']|--|\s)', raw_text)
-preprocessed = [item.strip() for item in preprocessed if item.strip()] # command used to remove whitespace 
+# here the whitespace would be considered as tokens 
+preprocessed = [item.strip() for item in preprocessed if item.strip()] # command used to remove whitespace, preprocessed is an array of tokens.
 # scan from left to right, looking for whitespace characters (\s)
 # whenever we find one, we split the string at that point
 # the parentheses around \s means we want to keep the whitespace characters in the result
@@ -25,9 +26,15 @@ print(len(preprocessed)) # print the total number of tokens
 all_words = sorted(set(preprocessed)) # sorted makes in in alphabetical order ad set makes it unique
 vocab_size = len(all_words)
 
-print("Vocab size:", vocab_size)
+print("Vocab size:", vocab_size)#1130 so it has alphabetically unique tokens 
 
-vocab = {token:integer for integer, token in enumerate(all_words)} # enumerate gives an integer to each token
+vocab = {token:integer for integer, token in enumerate(all_words)} # enumerate gives an integer to each token in alphabetical order, so we create a dictionary where the key is the token and the value is the integer (token Id)
+
+#to print them 
+for i, item in enumerate(vocab.items()):
+    print(item)
+    if i >= 50: 
+        break
 
 class SimpleTokenizerV1: # Rule based Tokenizer
     def __init__(self, vocab): # called when the instance of the class is created and vocab is mapping from token to token Ids
@@ -60,11 +67,13 @@ print(ids)
 text = tokenizer.decode(ids)
 print(text)
 
+# We read the-verdict.txt and split it into tokens with re.split, keeping punctuation as separate tokens and removing whitespace. We then removed duplicates and sorted the tokens, giving 1,130 unique tokens. Next we built a vocabulary: a dictionary that maps each unique token to a unique integer ID. Finally, SimpleTokenizerV1 uses that dictionary to encode text into IDs with instant lookups, and a reversed copy of it to decode IDs back into text. Any word not in the vocabulary causes an error, which is what V2's <|unk|> token fixes.
+
 all_tokens = sorted(list(set(preprocessed))) # list of unique tokens sorted in alphabetical order
 all_tokens.extend(["<|endoftext|>", "<|unk|>"]) # adding special token to indicate end of text
-vocab = {token:integer for integer, token in enumerate(all_tokens)}
+vocab = {token:integer for integer, token in enumerate(all_tokens)} #enumerate insures that they are in alphabetical order and gives them a unique integer Id
 
-print(len(vocab.items()))
+print(len(vocab.items())) # 1132, the tokens are added in the end
 
 for i, item in enumerate(list(vocab.items())[-5:]):
     print(item)
@@ -72,7 +81,8 @@ for i, item in enumerate(list(vocab.items())[-5:]):
 
 class SimpleTokenizerV2: #  Special Context Tokens
     def __init__(self, vocab): # called when the instance of the class is created and vocab is mapping from token to token Ids
-        # self is basically the instance of the class
+        # self is basically the instance of the class, 
+        # intializing two dictionaries, one for mapping from string to integer and the other for mapping from integer to string
         self.str_to_int = vocab
         self.int_to_str = {i:s for s,i in vocab.items()} # we take string which is token (s in this case) and i which is integer (i.e. token Id) we reverse the mapping by doing i:s instead of s:i, so we flip the mapping 
 
@@ -106,6 +116,8 @@ print(text)
 print(tokenizer.encode(text))
 
 print(tokenizer.decode(tokenizer.encode(text)))
+
+  
 
 
 
