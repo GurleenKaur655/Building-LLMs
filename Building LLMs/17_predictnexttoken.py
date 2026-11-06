@@ -44,7 +44,7 @@ def generate_text_sample(model, idx, max_new_tokens, context_size):
         idx_next = torch.argmax(probas, dim =-1, keepdim=True) #(batch, 1)
 
         #Append sampled index to the running sequence 
-        idx = torch.cat((idx, idx_next), dim=1) # (batch, n_tokens+1)
+        idx = torch.cat((idx, idx_next), dim=1) # (batch, n_tokens+1) //this adds the the token to the input list 
     return idx
 
 tokenizer = tiktoken.get_encoding("gpt2") 
