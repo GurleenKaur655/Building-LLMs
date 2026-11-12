@@ -96,5 +96,6 @@ end_time = time.time()
 execution_time_minutes = (end_time - start_time) / 60
 print(f"Training completed in {execution_time_minutes:.2f} minutes.")
 
+torch.save(model.state_dict(), "model.pth") # save the trained weights to a file
 ## 10 epochs leads to overfitting, basically its memorizing the content now, as the content provided to learn from is very small 
 # here the validation just gets evaluated and no back propogation does on it.
