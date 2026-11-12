@@ -47,27 +47,27 @@ def generate_text_sample(model, idx, max_new_tokens, context_size):
         idx = torch.cat((idx, idx_next), dim=1) # (batch, n_tokens+1) //this adds the the token to the input list 
     return idx
 
-tokenizer = tiktoken.get_encoding("gpt2") 
-start_context = "Hello, I am"
-encoded = tokenizer.encode(start_context)
-print("encoded:", encoded)
-encoded_tensor = torch.tensor(encoded).unsqueeze(0)
-print("encoded_tensor.shape", encoded_tensor.shape)
+# tokenizer = tiktoken.get_encoding("gpt2") 
+# start_context = "Hello, I am"
+# encoded = tokenizer.encode(start_context)
+# print("encoded:", encoded)
+# encoded_tensor = torch.tensor(encoded).unsqueeze(0)
+# print("encoded_tensor.shape", encoded_tensor.shape)
 
 
-model.eval() #we are putting the model in the evaluation mode passes some layers such as dropout layer or normalization layer 
-out = generate_text_sample(
-    model = model, 
-    idx=encoded_tensor, 
-    max_new_tokens=6,
-    context_size=GPT_CONFIG_124M["context_length"]
-)
-print("Output:", out)
-print("Output length", len(out[0]))
+# model.eval() #we are putting the model in the evaluation mode passes some layers such as dropout layer or normalization layer 
+# out = generate_text_sample(
+#     model = model, 
+#     idx=encoded_tensor, 
+#     max_new_tokens=6,
+#     context_size=GPT_CONFIG_124M["context_length"]
+# )
+# print("Output:", out)
+# print("Output length", len(out[0]))
 
-decoded_text = tokenizer.decode(out.squeeze(0).tolist())
-# decode wants [int, int, int, ...]. Without the squeeze you’d hand it [[int, int, ...]], a batch of one sequence, and it fails.
-print(decoded_text)
+# decoded_text = tokenizer.decode(out.squeeze(0).tolist())
+# # decode wants [int, int, int, ...]. Without the squeeze you’d hand it [[int, int, ...]], a batch of one sequence, and it fails.
+# print(decoded_text)
 # Hello, I am Featureiman Byeswickattribute argue
 
 # it random because we havent trained the model yet and all those parameters are random right now, so far we just implemented the GPT architecture and initialized a GPT model instance with initial random weights.
