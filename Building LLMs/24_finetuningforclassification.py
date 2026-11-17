@@ -382,3 +382,198 @@ print("ouputs dimensions:", outputs.shape)
 
 print("last output token:", outputs[:, -1, :])
 # last output token: tensor([[-4.1157,  4.6326]])
+
+
+#we can obtain the class label via the follwing code 
+# probas = torch.softmax(outputs[:, -1, :], dim=-1)
+# print(probas) # [0.0005, 0.9995]
+# label = torch.argmax(probas)
+# print("Class label:", label.item())
+# class label 1 means its a spam
+# using softmax here is optional since the largest ouputs direclty correspond to the highest probabilities 
+
+
+# to determine the classification accuracy, we apply the argmax-based prediction code to all the examples in the dataset and calculate the proportion
+def calc_accuracy_loader(data_loader, model, device, num_batches=None):
+    model.eval()
+    correct_predictions, num_examples = 0, 0 
+
+    if num_batches is None:
+        num_batches = len(data_loader)
+    else:
+        num_batches = min(num_batches, len(data_loader))
+    for i, (input_batch, target_batch) in enumerate(data_loader):
+        if i < num_batches: 
+            input_batch, target_batch = input_batch.to(device), target_batch.to(device)
+
+            with torch.no_grad():
+                logits = model(input_batch)[:,-1,:] #logtis of last ouput token
+            predicted_labels = torch.argmax(logits, dim=-1)
+
+            num_examples += predicted_labels.shape[0]
+            correct_predictions += (predicted_labels == target_batch).sum().item() #.sum() doesnt return a plain number, returns a tensor holding one number, .item() pulls that number out as a regular Python int
+        else:
+            break 
+    return correct_predictions / num_examples 
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+model.to(device)
+
+torch.manual_seed(123)
+
+train_accuracy = calc_accuracy_loader(train_loader, model, device, num_batches = 10)
+
+val_accuracy = calc_accuracy_loader(val_loader, model, device, num_batches = 10)
+
+test_accuracy = calc_accuracy_loader(test_loader, model , device, num_batches =10)
+
+print(f"Training accuracy: {train_accuracy*100:.2f}%")
+print(f"Validation accuracy: {val_accuracy*100:.2f}%")
+print(f"Test accuracy: {test_accuracy*100:.2f}%")
+
+# Training accuracy: 46.25%
+# Validation accuracy: 46.25%
+# Test accuracy: 43.75%
+
+# classification accuracy is not a differentiable function , so we use cross entropy loss as a proxy to maximize accuracy 
+
+
+# finetuning the model on supervised data 
+#Step 1: set the model to training mode
+#2: reset loss gradients from previous batch iteration
+#3: calculate loss gradients 
+#4: update model weights using loss gradients
+#5: new: track examples instead of tokens
+#6: optional evaluation step 
+#7: calculate accuracy after each epoch 
+def calc_loss_batch(input_batch, target_batch, model, device):
+    input_batch, target_batch = input_batch.to(device), target_batch.to(device)
+    logits = model(input_batch)[:, -1, :] # logits of last output token
+    loss = torch.nn.functional.cross_entropy(logits, target_batch)
+    return loss 
+
+def calc_loss_loader(data_loader, model, device, num_batches=None):
+    total_loss = 0.
+    if len(data_loader) == 0:
+        return float("nan")
+    elif num_batches is None:
+        num_batches = len(data_loader)
+    else: 
+        # reduce the number of batches to match the total numebr of batches in the data loader 
+        num_batches = min(num_batches, len(data_loader))
+    for i, (input_batch, target_batch) in enumerate(data_loader):
+        if i < num_batches:
+            loss = calc_loss_batch(input_batch, target_batch, model, device)
+            total_loss += loss.item()
+        else:
+            break
+    return total_loss/ num_batches
+
+def evaluate_model(model, train_loader, val_loader, device, eval_iter):
+    model.eval() # removes dropout
+    with torch.no_grad(): # removes the gradient calculation because we are not training but evaluating
+        train_loss = calc_loss_loader(train_loader, model, device, num_batches=eval_iter) # this = to eval_iter means it only checks after a few batches instead of a whole dataset, so u can call it often during training without slowing down much 
+        val_loss = calc_loss_loader(val_loader, model, device, num_batches=eval_iter)
+    model.train()
+    return train_loss, val_loss
+
+def train_classifier_simple(model, train_loader, val_loader, optimizer, device, num_epochs, eval_freq, eval_iter):
+
+    # Initialize lists to track losses and examples seen
+    train_losses, val_losses, train_accs, val_accs = [], [], [], []
+    examples_seen, global_step = 0, -1
+
+    # Main training loop 
+    for epoch in range(num_epochs):
+        model.train() # set model to training mode 
+
+        for input_batch, target_batch in train_loader:
+            optimizer.zero_grad() # reset loss gradients from previous batch iteration 
+            loss = calc_loss_batch(input_batch, target_batch, model, device)
+            loss.backward() # calculate loss gradients 
+            optimizer.step() # update model weights using loss gradients 
+            examples_seen += input_batch.shape[0] # New : track examples instead of tokens
+            global_step += 1
+
+            # Optional evaluation step 
+            if global_step % eval_freq == 0:
+                train_loss, val_loss = evaluate_model(
+                    model, train_loader, val_loader, device, eval_iter 
+                )
+                train_losses.append(train_loss)
+                val_losses.append(val_loss)
+                print(f"Ep{epoch+1} (Step {global_step:06d}): "
+                      f"Train loss {train_loss:.3f}, Val loss {val_loss:.3f}")
+                
+        # calculate accuracy after each epoch 
+        train_accuracy = calc_accuracy_loader(train_loader, model, device, num_batches=eval_iter)
+        val_accuracy = calc_accuracy_loader(val_loader, model, device, num_batches=eval_iter)
+        print(f"Training accuracy: {train_accuracy*100: .2f}% | ", end="")
+        print(f"Validation accuracy: {val_accuracy*100: .2f}%")
+        train_accs.append(train_accuracy)
+        val_accs.append(val_accuracy)
+    return train_losses, val_losses, train_accs, val_accs, examples_seen
+
+
+import time 
+start_time = time.time()
+torch.manual_seed(123)
+optimizer = torch.optim.AdamW(model.parameters(), lr =5e-5, weight_decay=0.1)
+
+num_epochs = 5
+train_losses, val_losses, train_accs, val_accs, examples_seen = train_classifier_simple(
+    model, train_loader, val_loader, optimizer, device, num_epochs= num_epochs, eval_freq=50, eval_iter=5, 
+)
+end_time = time.time()
+execution_time_minutes = (end_time - start_time) / 60
+print(f"Training completed in { execution_time_minutes:.2f} minutes.")
+
+train_accuracy = calc_accuracy_loader(train_loader, model, device)
+val_accuracy = calc_accuracy_loader(val_loader, model, device)
+test_accuracy = calc_accuracy_loader(test_loader, model, device)
+
+print(f"Training accuracy: {train_accuracy*100: .2f}%")
+print(f"Validation accuracy: {val_accuracy*100: .2f}%")
+print(f"Test accuracy: {test_accuracy*100: .2f}%")
+
+def classify_review(text, model, tokenizer, device, max_length=None, pad_token_id=50256):
+    input_ids = tokenizer.encode(text)
+    supported_context_length = model.pos_emb.weight.shape[0]
+
+    input_ids = input_ids[:min(max_length, supported_context_length)]
+
+    #pad sequences to the longest seqeunce 
+    input_ids += [pad_token_id] * (max_length - len(input_ids))
+    input_tensor = torch.tensor(input_ids, device=device).unsqueeze(0) # add batch dimension
+
+    #model inference
+    with torch.no_grad():
+        logits = model(input_tensor)[:, -1, :] # logits of the last output token 
+    predicted_label = torch.argmax(logits, dim=-1).item()
+
+    return "spam" if predicted_label == 1 else "not spam"
+
+
+text_1 = (
+    "You are a winner you have been specially"
+    " selected to receive $1000 cash or $2000 award."
+)
+
+print(classify_review(
+    text_1, model, tokenizer, device, max_length=train_dataset.max_length
+))
+
+text_2 = (
+    "hey, just wanted to check if we are still on"
+    "for dinner tonight?let me know"
+)
+
+print(classify_review(
+    text_2, model, tokenizer, device, max_length=train_dataset.max_length
+))
+
+torch.save(model.state_dict(), "review_classifier.pth")
+
+model_state_dict = torch.load("review_classifier.pth")
+model.load_state_dict(model_state_dict)
