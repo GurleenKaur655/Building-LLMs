@@ -18,12 +18,11 @@ This isn't about training a production-scale model like ChatGPT. It's about unde
 ```text
 Building-LLMs/
 ├── README.md
-└── Building LLMs/
-    ├── 01_tokenizer.py ... 24_finetuningforclassification.py   # one script per concept
-    ├── gpt_download3.py              # downloads and loads OpenAI GPT-2 weights
-    ├── the-verdict.txt               # small text corpus used for pretraining
-    ├── sms_spam_collection/          # SMS Spam Collection dataset
-    └── train.csv / validation.csv / test.csv   # balanced spam dataset splits
+├── 01_tokenizer.py ... 24_finetuningforclassification.py   # one script per concept
+├── gpt_download3.py              # downloads and loads OpenAI GPT-2 weights
+├── the-verdict.txt               # small text corpus used for pretraining
+├── sms_spam_collection/          # SMS Spam Collection dataset
+└── train.csv / validation.csv / test.csv   # balanced spam dataset splits
 ```
 
 ## Scripts
@@ -100,12 +99,11 @@ python3 -m pip install torch tiktoken numpy pandas tensorflow tqdm requests
 
 `tensorflow` is only needed to read OpenAI's GPT-2 checkpoint files (scripts 23 and 24).
 
-### 2. Run scripts from inside the `Building LLMs` folder
+### 2. Run scripts from the repo root
 
-The scripts use relative paths and import each other with `importlib`, so run them from that folder:
+The scripts use relative paths and import each other with `importlib`, so run them from the repo root:
 
 ```bash
-cd "Building LLMs"
 python3 "01_tokenizer.py"
 ```
 
